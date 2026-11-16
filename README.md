@@ -95,6 +95,18 @@ curl localhost:9000/metrics | grep gateway_
 curl localhost:9000/review/api/reviews          # 无 token 返回 401
 ```
 
+## 运行效果
+
+以下两图是命令的实际输出（终端渲染）：
+
+<img src="docs/screenshots/startup-auth.png" width="90%">
+
+启动后健康检查返回 200；访问受保护路由不带 token 返回 401，带上 JWT 后转发到后端并返回数据。
+
+<img src="docs/screenshots/ratelimit-metrics.png" width="90%">
+
+400 个并发请求中 105 个通过、295 个被限流拒绝；指标里能看到按路由和状态码聚合的计数。
+
 ## 实测数据
 
 400 个并发请求打 `/health`（限流配置 50 rps、burst 100）：
