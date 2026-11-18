@@ -77,6 +77,19 @@ JWT 校验只接受 HMAC 系列算法，显式拒绝 `alg=none`——这是最�
 
 `/metrics` 不经过限流，否则 Prometheus 抓取会被自己限掉。
 
+## 健康检查
+
+`/healthz` 和 `/metrics` 一样挂在中间件链外面 —— 探针不该被鉴权挡住，也不该占用限流配额：
+
+```bash
+$ curl -s http://127.0.0.1:9000/healthz
+{"breakersOpen":0,"listen":":9000","routes":2,"status":"ok","uptimeSec":3}
+```
+
+**路由表为空时返回 503 + `status:"no-route"`**：进程活着但一条可代理的路由都没有，对上游来说等于不可用，
+返回 200 只会让编排系统把流量继续打进来。`breakersOpen` 顺带暴露当前有几个熔断器处于打开状态，
+排查「网关整体 5xx」时先看这个数。
+
 ## 快速开始
 
 ```bash
