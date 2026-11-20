@@ -83,14 +83,19 @@ func (c *Config) validate() error {
 	if len(c.Routes) == 0 {
 		return errors.New("至少要配置一条路由")
 	}
-	for i, r := range c.Routes {
+	// 注意必须用下标取址：按值遍历拿到的是副本，默认值写回副本等于没写，
+	// 于是没填 breaker 的路由阈值/窗口都是 0，熔断永不拦截；没填 weight 的后端权重恒为 0，
+	// PickBackend 里 total<=0 直接退化到第一个后端，多实例分流形同虚设。
+	for i := range c.Routes {
+		r := &c.Routes[i]
 		if r.Prefix == "" {
 			return fmt.Errorf("第 %d 条路由缺少 prefix", i+1)
 		}
 		if len(r.Backends) == 0 {
 			return fmt.Errorf("路由 %s 没有配置后端", r.Prefix)
 		}
-		for _, b := range r.Backends {
+		for j := range r.Backends {
+			b := &r.Backends[j]
 			if b.URL == "" {
 				return fmt.Errorf("路由 %s 的后端缺少 url", r.Prefix)
 			}
