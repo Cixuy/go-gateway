@@ -44,6 +44,19 @@ func (rl *RateLimiter) get(key string) *rate.Limiter {
 	return v.limiter
 }
 
+// Update 热加载时换掉限流参数：已有访客的桶也要跟着换。
+// 只改结构体字段的话，配置改了日志也说“已更新”，实际还在按老 rps 限流。
+// 这里直接重建桶（等价于清空余额）而不用 SetLimit：老桶余额为 0 时，
+// 调大 rps 后还要等一阵才攒够一个令牌，改配置看起来“没生效”。
+func (rl *RateLimiter) Update(rps float64, burst int) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl.rps, rl.burst = rps, burst
+	for _, v := range rl.visitors {
+		v.limiter = rate.NewLimiter(rate.Limit(rps), burst)
+	}
+}
+
 func (rl *RateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
